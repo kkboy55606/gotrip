@@ -45,15 +45,19 @@
 | 觀光署活動（樂 → 近期活動） | ✅ | 245 筆未結束；花蓮車站 30km 內 19 個；修正 UTC 誤標日期 |
 | build 腳本（下載、解壓、分檔） | ✅ | 本機用實際 zip 跑過；zip 解壓與轉換有測試 |
 | GitHub Actions 每日更新 | 🔒 | workflow 檔已寫好；目前 gh 權杖沒有 `workflow` 權限，需使用者執行 `gh auth refresh -h github.com -s workflow` 後才能推上去；觀光署伺服器能否從 GitHub（美國）連線待第一次執行確認 |
-| GitHub Pages 部署 | 🟢 | 見變更紀錄 |
+| GitHub Pages 部署 | ✅ | https://kkboy55606.github.io/gotrip/ ；正式網址實測附近清單、觀光署景點、service worker、HTTPS；手機 GPS 與「加到主畫面」需使用者實機確認 🔒 |
 
 ## 下一步（建議）
-1. 推到 GitHub 並開 GitHub Pages，用手機實測 GPS、加到主畫面
-2. 台灣時間早上 8 點後（TDX 額度重置）用真實資料驗一次交通、路況分頁
-3. 申請氣象署授權碼後驗一次天氣
+1. 使用者執行 `gh auth refresh -h github.com -s workflow` → 推上每日更新排程，手動觸發一次確認 GitHub 連得到觀光署
+2. 用手機打開正式網址，實測 GPS、加到主畫面
+3. 台灣時間早上 8 點後（TDX 額度重置）用真實資料驗一次交通、路況分頁
+4. 申請氣象署授權碼後驗一次天氣
 
 ## 變更紀錄
 - 2026-10-11：**S1 第一版：免費開放資料的台灣旅遊 PWA**。新增 `index.html`、`css/app.css`、`js/`（app、config、dom、geo、places-logic、opening-hours、osm、osrm、links、map、route-order、storage、tdx、weather、closures、errors、demo、google⏸）、`sw.js`、`manifest.webmanifest`、`icons/`。關鍵設計：純前端無後端（D1）、金鑰只存手機（D2）、停業一律排除（D3）、由 Google 改為免費資料（D5）、Overpass 多伺服器備援（D6）、縣市判斷雙來源（D7）。
   驗收：`npm test` 98 條全綠（停業標記過濾、營業時間跨午夜/跨週/公休、OSRM 分批與備援、Overpass 換伺服器、TDX 解析與快取、示範模式不寫快取、KML 抽樣與距離、氣象署解析）。回歸：無既有測試（新專案）。
   線上驗證：本機 python http.server + 內建瀏覽器手機尺寸 375×812；真實資料實測附近清單、三種交通時間、詳情、收藏排順路、地圖、地名搜尋、省道封閉、步道公告；示範模式驗天氣、台鐵、公車、道路事件畫面。契約為首版定義（見 CLAUDE.md）。
   實測發現並修正：示範資料被寫入正式快取（已修＋測試）、TDX 額度用完時天氣跟著失敗（D7）、地圖底部被選單遮住、🧋 在舊系統顯示成方框（改 🥤）。
+- 2026-10-11：**S2 觀光署官方景點與活動＋部署 GitHub Pages**。新增 `js/tourism.js`、`scripts/tourism-lib.js`、`scripts/build-tourism.js`、`data/tourism/`（88 個景點格子檔＋活動檔，共 4.8MB）、`.nojekyll`、`.github/workflows/update-tourism.yml`（待推）；`config.js` 加「觀光署景點」「近期活動」，`app.js` 詳情加照片/簡介/門票/停車。關鍵設計：build 時整理成靜態小檔（D9）、只留正常營運景點（D10）、部署與 noreply 信箱（D11）、修正活動 UTC 誤標日期。
+  驗收：`npm test` 109 條全綠（新增 11 條：zip 解壓、營運狀態過濾、營業時間轉換、日期修正、分檔、活動狀態）。回歸：S1 的 98 條全綠。
+  線上驗證：本機與正式網址 https://kkboy55606.github.io/gotrip/ 皆實測（花蓮車站：景點 2km 12 個、10km 106 個；活動 30km 19 個；照片載入；service worker 註冊）。契約純 additive（新增 `data/tourism/` 格式定義，見 CLAUDE.md）。
