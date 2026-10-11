@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>GoTrip 出遊</title>
+  <meta name="description" content="台灣旅遊附近吃喝玩樂：距離、交通時間、營業狀態、天氣、台鐵公車、路況（免費開放資料）">
+  <meta name="theme-color" content="#0f7b6c">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="GoTrip">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <header class="topbar">
+    <button id="loc-btn" class="loc-btn" type="button" aria-label="切換位置">
+      <span class="loc-pin" aria-hidden="true">📍</span>
+      <span class="loc-text">
+        <span id="loc-label" class="loc-label">尚未定位</span>
+        <span id="loc-sub" class="loc-sub">點這裡選擇位置</span>
+      </span>
+      <span aria-hidden="true">▾</span>
+    </button>
+    <button id="settings-btn" class="icon-btn" type="button" aria-label="設定">⚙️</button>
+  </header>
+
+  <div id="demo-banner" class="banner banner-demo" hidden>示範模式：資料是假的，只用來預覽畫面</div>
+  <button id="weather-strip" class="weather-strip" type="button" hidden></button>
+
+  <main id="main">
+    <!-- 附近 -->
+    <section id="view-nearby" class="view" aria-label="附近">
+      <div class="chips" id="cat-chips" role="tablist" aria-label="分類"></div>
+      <div class="chips chips-sub" id="sub-chips" hidden></div>
+
+      <div class="controls">
+        <div class="seg" id="mode-seg" role="radiogroup" aria-label="交通方式"></div>
+        <div class="control-row">
+          <label class="select-wrap"><span class="sr-only">範圍</span><select id="radius-select"></select></label>
+          <label class="toggle"><input type="checkbox" id="open-now"> 只看營業中</label>
+        </div>
+      </div>
+
+      <p id="nearby-status" class="status" role="status"></p>
+      <ul id="place-list" class="card-list"></ul>
+      <p class="attribution">地點 © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap 貢獻者</a>・路線 OSRM・已排除標記為停業的地點；開放資料可能未即時更新，出發前可在詳情按「在 Google 地圖查評論」再確認。</p>
+    </section>
+
+    <!-- 地圖 -->
+    <section id="view-map" class="view view-map" aria-label="地圖" hidden>
+      <div id="map" class="map"></div>
+      <p id="map-status" class="status map-status" role="status"></p>
+    </section>
+
+    <!-- 交通 -->
+    <section id="view-transit" class="view" aria-label="交通" hidden>
+      <h2 class="section-title">🚆 台鐵</h2>
+      <div id="tra-panel" class="panel"></div>
+      <h2 class="section-title">🚌 附近公車・客運</h2>
+      <div id="bus-panel" class="panel"></div>
+    </section>
+
+    <!-- 收藏 -->
+    <section id="view-favs" class="view" aria-label="收藏" hidden>
+      <div class="fav-actions">
+        <button id="fav-order-btn" class="btn" type="button">🧭 排順路</button>
+        <a id="fav-route-link" class="btn btn-primary" target="_blank" rel="noopener" hidden>用 Google 地圖走這條路線</a>
+      </div>
+      <p id="fav-status" class="status" role="status"></p>
+      <ol id="fav-list" class="card-list fav-list"></ol>
+    </section>
+
+    <!-- 路況 -->
+    <section id="view-road" class="view" aria-label="路況" hidden>
+      <h2 class="section-title">⛅ 天氣與特報</h2>
+      <div id="warning-panel" class="panel"></div>
+      <h2 class="section-title">🚧 附近道路事件</h2>
+      <div id="road-panel" class="panel"></div>
+      <h2 class="section-title">⛔ 省道長期封閉路段（公路局）</h2>
+      <div id="control-panel" class="panel"></div>
+      <h2 class="section-title">🥾 國家步道公告（林業保育署）</h2>
+      <div id="trail-panel" class="panel"></div>
+      <h2 class="section-title">🔗 官方資訊</h2>
+      <div id="links-panel" class="panel"></div>
+    </section>
+  </main>
+
+  <nav class="tabbar" aria-label="主選單">
+    <button class="tab" data-view="nearby" type="button" aria-current="page"><span aria-hidden="true">📍</span>附近</button>
+    <button class="tab" data-view="map" type="button"><span aria-hidden="true">🗺️</span>地圖</button>
+    <button class="tab" data-view="transit" type="button"><span aria-hidden="true">🚆</span>交通</button>
+    <button class="tab" data-view="favs" type="button"><span aria-hidden="true">⭐</span>收藏</button>
+    <button class="tab" data-view="road" type="button"><span aria-hidden="true">🚧</span>路況</button>
+  </nav>
+
+  <!-- 地點詳情 -->
+  <dialog id="detail-sheet" class="sheet">
+    <div class="sheet-head">
+      <h2 id="detail-title" class="sheet-title"></h2>
+      <button class="icon-btn" type="button" data-close aria-label="關閉">✕</button>
+    </div>
+    <div id="detail-body" class="sheet-body"></div>
+  </dialog>
+
+  <!-- 選擇位置 -->
+  <dialog id="loc-sheet" class="sheet">
+    <div class="sheet-head">
+      <h2 class="sheet-title">選擇位置</h2>
+      <button class="icon-btn" type="button" data-close aria-label="關閉">✕</button>
+    </div>
+    <div class="sheet-body">
+      <button id="gps-btn" class="btn btn-primary btn-block" type="button">📡 使用我現在的位置</button>
+      <form id="search-form" class="search-form">
+        <input id="search-input" type="search" placeholder="搜尋地名，例如：清水斷崖" autocomplete="off" enterkeyhint="search">
+        <button class="btn" type="submit">搜尋</button>
+      </form>
+      <ul id="search-results" class="result-list"></ul>
+      <div id="preset-list" class="preset-list"></div>
+    </div>
+  </dialog>
+
+  <!-- 設定 -->
+  <dialog id="settings-sheet" class="sheet">
+    <div class="sheet-head">
+      <h2 class="sheet-title">設定</h2>
+      <button class="icon-btn" type="button" data-close aria-label="關閉">✕</button>
+    </div>
+    <form id="settings-form" class="sheet-body settings">
+      <p class="note">🔒 這些都是免費帳號，金鑰只會存在這支手機的瀏覽器裡，不會上傳到任何伺服器。附近店家、路線、地圖不需要任何金鑰。</p>
+
+      <fieldset>
+        <legend>中央氣象署授權碼（選填・免費）</legend>
+        <input name="cwaKey" type="password" autocomplete="off" spellcheck="false" placeholder="CWA-…">
+        <p class="hint">用於天氣與特報。<a href="https://opendata.cwa.gov.tw/user/authkey" target="_blank" rel="noopener">申請授權碼</a></p>
+      </fieldset>
+
+      <fieldset>
+        <legend>交通部 TDX（選填・免費）</legend>
+        <input name="tdxId" type="text" autocomplete="off" spellcheck="false" placeholder="Client Id">
+        <input name="tdxSecret" type="password" autocomplete="off" spellcheck="false" placeholder="Client Secret">
+        <p class="hint">用於台鐵、公車、道路事件。不填也能用，但每天次數很少。<a href="https://tdx.transportdata.tw/register" target="_blank" rel="noopener">註冊 TDX</a></p>
+      </fieldset>
+
+      <button class="btn btn-primary btn-block" type="submit">儲存</button>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" hidden></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

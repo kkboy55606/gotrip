@@ -1,0 +1,11 @@
+{
+  "name": "gotrip",
+  "version": "0.1.0",
+  "private": true,
+  "description": "台灣旅遊附近吃喝玩樂 PWA：距離、交通時間、營業狀態",
+  "type": "module",
+  "scripts": {
+    "test": "node --test \"tests/*.test.js\"",
+    "start": "python -m http.server 8080"
+  }
+}
