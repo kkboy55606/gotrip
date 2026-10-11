@@ -15,6 +15,9 @@
   - 天氣：中央氣象署（免費授權碼，放網址參數）
   - 台鐵/公車/公路事件：TDX（免費帳號；不填用免登入額度：每 IP 每天 20 次、瀏覽器限定）
   - 步道公告：林業保育署；省道長期封閉：公路局 bobe168 KML（`js/closures.js`）
+  - 官方景點與活動：觀光署（`scripts/build-tourism.js` 每天由 GitHub Actions 整理成 `data/tourism/`，App 讀本站靜態檔 `js/tourism.js`）
+- 部署：GitHub Pages（`kkboy55606/gotrip`，main 分支根目錄），網址 https://kkboy55606.github.io/gotrip/
+- commit 作者信箱用 GitHub noreply（`9152508+kkboy55606@users.noreply.github.com`），不可用個人信箱
 - `js/google.js`：⏸ 未啟用（2026-10-11 改用免費資料），保留供日後切回，測試仍會跑
 
 ## 凍結契約（只能 additive，不得改名或改型別）
@@ -27,8 +30,13 @@ localStorage（使用者手機上的資料，改壞會讓使用者遺失收藏/�
 - `gotrip.usage.v1`：Google 用量計數（目前未使用）
 - `gotrip.tdxcache:*`、`gotrip.cache:*`：快取，可隨時清除，不屬契約
 
+`data/tourism/`（build 腳本產生、App 讀取；舊版 App 可能被 service worker 快取，所以只能 additive）：
+- `index.json`：`{updateTime, builtFor, spots, skippedNotOperating, events, tiles: ['<latIdx>_<lngIdx>']}`，格子 = floor(座標 / 0.25)
+- `spots/<key>.json`：`[{id, n, lat, lng, c?, a?, t?, d?, img?, w?, h?, f?, p?}]`（名稱、座標、分類代碼、地址、電話、簡介、圖片、網站、OSM 格式營業時間、收費、停車）
+- `events.json`：`{updateTime, events: [{id, n, lat, lng, s, e, a?, t?, d?, img?, w?, f?}]}`（s/e 為台灣日期 YYYY-MM-DD，含頭含尾）
+
 ## 不可誤傷
-- **標記停業 / 暫停營業 / 不對外開放的地點一律不顯示**（`osm.js` 的 `isClosedOsm` + `places-logic.js` 的 `filterPlaces`，有回歸測試）
+- **標記停業 / 暫停營業 / 不對外開放的地點一律不顯示**（`osm.js` 的 `isClosedOsm` + `places-logic.js` 的 `filterPlaces`；觀光署景點只留 ServiceStatus 1，`tourism-lib.js` 的 `isOperatingAttraction`；皆有回歸測試）
 - 金鑰只存使用者手機的 localStorage：**不得寫進程式碼、不得 commit、不得印到 console**
 - 示範模式不得寫入持久快取（曾發生假資料留到正式模式，有回歸測試）
 - 資料來源標示（OSM、國土測繪中心、OSRM）必須看得到；地圖高度要扣掉底部選單

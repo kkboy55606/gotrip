@@ -1,6 +1,7 @@
 // 分類、交通方式、預設地點等設定
 // q：Overpass 查詢的選擇器（OpenStreetMap 標籤），會自動加上 (around:半徑,緯度,經度)
 // named：false 表示沒有名稱也列出（廁所、停車場這類設施常沒取名）
+// source：改用觀光署資料（tourism = 官方景點、events = 活動）；minRadius：最小搜尋半徑（活動比較稀疏）
 
 const A = (k, v) => `nwr["${k}"~"^(${v})$"]`;
 
@@ -30,6 +31,7 @@ export const CATEGORIES = [
     id: 'play', label: '玩', icon: '🏞️',
     subs: [
       { id: 'all', label: '全部', q: [A('tourism', 'attraction|viewpoint|museum|gallery|zoo|aquarium|theme_park'), A('leisure', 'park|nature_reserve|beach_resort'), `nwr["natural"="beach"]["name"]`] },
+      { id: 'official', label: '觀光署景點', source: 'tourism' },
       { id: 'nature', label: '自然風景', q: [A('tourism', 'viewpoint'), A('leisure', 'nature_reserve'), `nwr["natural"~"^(beach|hot_spring)$"]["name"]`, `nwr["waterway"="waterfall"]["name"]`, `node["natural"="peak"]["name"]`] },
       { id: 'culture', label: '文化古蹟', q: [A('tourism', 'museum|gallery'), `nwr["historic"]["name"]`, `nwr["amenity"="place_of_worship"]["religion"~"buddhist|taoist|chinese_folk"]["name"]`] },
       { id: 'family', label: '親子', q: [A('tourism', 'zoo|aquarium|theme_park'), A('leisure', 'water_park|park')] },
@@ -39,6 +41,7 @@ export const CATEGORIES = [
     id: 'fun', label: '樂', icon: '🎤',
     subs: [
       { id: 'all', label: '全部', q: [A('amenity', 'nightclub|cinema|karaoke_box|marketplace'), A('leisure', 'bowling_alley|amusement_arcade'), A('shop', 'mall|department_store')] },
+      { id: 'events', label: '近期活動', source: 'events', minRadius: 30000 },
       { id: 'nightmarket', label: '夜市', q: [`nwr["name"~"夜市"]`] },
       { id: 'shopping', label: '逛街', q: [A('shop', 'mall|department_store'), A('amenity', 'marketplace')] },
       { id: 'karaoke', label: '唱歌', q: [A('amenity', 'karaoke_box')] },

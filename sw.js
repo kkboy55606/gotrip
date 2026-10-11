@@ -1,7 +1,7 @@
 // Service Worker：讓 App 可以「加到主畫面」，並在網路不穩時仍能打開畫面。
 // 策略：App 本身的檔案「先上網抓新版、失敗才用快取」，避免改版後卡在舊版；
 // API 請求（開放地圖、路線、氣象署、TDX…）都是別的網域，一律直接走網路、不快取。
-const CACHE = 'gotrip-shell-v2';
+const CACHE = 'gotrip-shell-v3';
 const SHELL = [
   './',
   'index.html',
@@ -25,6 +25,7 @@ const SHELL = [
   'js/route-order.js',
   'js/storage.js',
   'js/tdx.js',
+  'js/tourism.js',
   'js/weather.js',
 ];
 

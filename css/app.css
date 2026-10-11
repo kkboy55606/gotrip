@@ -213,6 +213,8 @@ a { color: var(--accent); }
 .detail-time { background: var(--surface-2); border-radius: 10px; padding: 8px 10px; color: var(--text); text-decoration: none; }
 .detail-time b { display: block; font-size: 17px; color: var(--accent); }
 .detail-time small { color: var(--muted); }
+.detail-img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 12px; background: var(--surface-2); margin: 6px 0 10px; }
+.detail-desc { font-size: 14px; line-height: 1.7; margin: 8px 0; }
 .detail-hours { list-style: none; padding: 0; margin: 6px 0; font-size: 14px; }
 .detail-hours li.today { font-weight: 700; color: var(--accent); }
 .detail-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 12px; }

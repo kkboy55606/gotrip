@@ -16,6 +16,7 @@ import {
 } from './tdx.js';
 import { createWeather } from './weather.js';
 import { fetchTrailNotices, filterTrailNotices, fetchControlEvents, nearControlEvents } from './closures.js';
+import { loadSpots, loadEvents, eventPhase } from './tourism.js';
 
 const DEMO = new URLSearchParams(location.search).has('demo');
 if (DEMO) {
@@ -50,6 +51,8 @@ const modeInfo = (id = state.settings.mode) => MODES.find((m) => m.id === id) ??
 const currentCat = () => CATEGORIES.find((c) => c.id === state.cat);
 const currentSub = () => currentCat().subs.find((s) => s.id === state.sub) ?? currentCat().subs[0];
 const routeKey = (mode, id) => `${roundCoordKey(state.center, 4)}|${mode}|${id}`;
+/** 實際搜尋半徑：活動比較稀疏，至少搜 minRadius */
+const effectiveRadius = () => Math.max(state.settings.radius, currentSub().minRadius ?? 0);
 
 function rebuildClients() {
   const s = state.settings;
@@ -194,7 +197,8 @@ function setStatus(msg, isError = false) {
 /** 依目前條件算出要顯示的清單：重算距離與營業狀態、套上路線時間、只取最近 SHOW_LIMIT 個 */
 function visiblePlaces() {
   const now = new Date();
-  const { openNowOnly, mode, radius } = state.settings;
+  const { openNowOnly, mode } = state.settings;
+  const radius = effectiveRadius();
   const list = state.raw
     .map((p) => {
       const routes = {};
@@ -226,7 +230,11 @@ async function loadNearby() {
   try {
     const hit = placeCache.get(cacheKey);
     let result;
-    if (hit && Date.now() - hit.at < 15 * 60 * 1000) {
+    if (sub.source) {
+      // 觀光署資料：本站的靜態檔（模組內已快取），不經 Overpass
+      const r = effectiveRadius();
+      result = { places: sub.source === 'events' ? await loadEvents(state.center, r) : await loadSpots(state.center, r), truncated: false };
+    } else if (hit && Date.now() - hit.at < 15 * 60 * 1000) {
       result = hit.result;
     } else {
       const json = await queryOverpass(buildOverpassQuery(sub.q, qc, qr));
@@ -263,7 +271,7 @@ async function loadRoutes(seq) {
 }
 
 function statusPill(p) {
-  const s = openStatus(p.hours);
+  const s = p.source === 'event' ? eventPhase({ s: p.start, e: p.end }) : openStatus(p.hours);
   const label = s.kind === 'unknown' && p.openingHours ? '營業時間見詳情' : s.label;
   return h('span', { class: `pill pill-${s.kind}` }, label);
 }
@@ -276,7 +284,7 @@ function travelText(p, mode) {
   return { time: state.routesPending ? '計算中' : '—', dist: `直線 ${formatDistance(p.distance)}` };
 }
 
-const placeMeta = (p) => [p.type, p.cuisine].filter(Boolean).map((t) => h('span', {}, t));
+const placeMeta = (p) => [p.type, p.cuisine, p.dateRange && `📅 ${p.dateRange}`].filter(Boolean).map((t) => h('span', {}, t));
 const favPayload = (p) => ({ id: p.id, name: p.displayName, lat: p.lat, lng: p.lng, address: p.address, type: p.type });
 
 function favButton(p, onChange) {
@@ -296,7 +304,8 @@ function renderPlaces() {
   const list = $('#place-list');
   const mode = state.settings.mode;
   const shown = visiblePlaces();
-  const inRange = state.raw.filter((p) => haversine(state.center, p) <= state.settings.radius);
+  const inRange = state.raw.filter((p) => haversine(state.center, p) <= effectiveRadius());
+  const sub = currentSub();
   const closed = inRange.filter(isClosedBusiness).length;
   const now = new Date();
   const notOpen = state.settings.openNowOnly
@@ -304,12 +313,15 @@ function renderPlaces() {
     : 0;
   const notes = [closed && `排除標記停業 ${closed} 個`, notOpen && `隱藏休息中 ${notOpen} 個`].filter(Boolean);
   const total = inRange.length - closed - notOpen;
+  const sourceNote = sub.source === 'tourism' ? '・觀光署資料，已排除停止或暫停營運的景點'
+    : sub.source === 'events' ? `・觀光署活動，搜尋 ${formatDistance(effectiveRadius())} 內還沒結束的` : '';
   if (!state.raw.length) {
-    setStatus('這個範圍內沒有找到，試試擴大範圍或換個分類');
+    setStatus(`這個範圍內沒有找到，試試擴大範圍或換個分類${sourceNote}`);
   } else {
     setStatus([
       `找到 ${total} 個${total > shown.length ? `，顯示最近 ${shown.length} 個` : ''}`,
       notes.length ? `（${notes.join('、')}）` : '',
+      sourceNote,
       state.truncated ? '・範圍內地點太多，建議縮小範圍' : '',
       modeInfo().note ? `・${modeInfo().short}時間${modeInfo().note}` : '',
     ].join(''));
@@ -355,9 +367,13 @@ async function openDetail(p) {
   const weekly = p.hours?.weekdayDescriptions;
   const todayIdx = (twParts(new Date()).weekday + 6) % 7;
   setChildren(body,
+    p.image && h('img', { class: 'detail-img', src: p.image, alt: p.displayName, loading: 'lazy', referrerpolicy: 'no-referrer', onerror: (e) => e.currentTarget.remove() }),
     h('div', { class: 'card-meta' }, placeMeta(p)),
     p.address && h('p', { class: 'card-meta' }, p.address),
     statusPill(p),
+    p.description && h('p', { class: 'detail-desc' }, p.description),
+    p.fee && h('p', {}, `🎫 ${p.fee}`),
+    p.parking && h('p', { class: 'hint' }, `🅿️ ${p.parking}`),
     todayHoursText(p.hours) && h('p', {}, `今天：${todayHoursText(p.hours).replace(/^[^:：]+[:：]\s*/, '')}`),
     h('h3', { class: 'section-title' }, `從「${state.center.label}」出發`),
     timesBox,
@@ -374,12 +390,14 @@ async function openDetail(p) {
       h('a', { class: 'btn btn-primary', href: googleSearchUrl(p), target: '_blank', rel: 'noopener' }, '在 Google 地圖查評論'),
       favButton(p, () => state.view === 'favs' && renderFavs()),
     ),
-    h('p', { class: 'hint' },
-      '資料來自 OpenStreetMap 志工，可能未即時更新',
-      p.checkDate ? `（最後確認：${p.checkDate}）` : '',
-      '。發現已停業可以 ',
-      h('a', { href: p.osmUrl, target: '_blank', rel: 'noopener' }, '到 OpenStreetMap 回報'),
-      '。'),
+    p.source
+      ? h('p', { class: 'hint' }, '資料來源：交通部觀光署 觀光資訊資料庫（每天更新）。實際開放與活動時間請以官方公告為準。')
+      : h('p', { class: 'hint' },
+        '資料來自 OpenStreetMap 志工，可能未即時更新',
+        p.checkDate ? `（最後確認：${p.checkDate}）` : '',
+        '。發現已停業可以 ',
+        h('a', { href: p.osmUrl, target: '_blank', rel: 'noopener' }, '到 OpenStreetMap 回報'),
+        '。'),
   );
   if (!$('#detail-sheet').open) $('#detail-sheet').showModal();
 

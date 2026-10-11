@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "test": "node --test \"tests/*.test.js\"",
-    "start": "python -m http.server 8080"
+    "start": "python -m http.server 8080",
+    "build:tourism": "node scripts/build-tourism.js"
   }
 }

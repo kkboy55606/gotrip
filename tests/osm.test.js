@@ -15,9 +15,13 @@ test('buildOverpassQuery：單行、timeout 25、每個選擇器都加上 around
   assert.ok(!q.includes('\n'));
 });
 
-test('config：每個分類都有 Overpass 選擇器，且語法括號成對', () => {
+test('config：每個分類都有 Overpass 選擇器（或指定觀光署資料來源），且語法括號成對', () => {
   for (const c of CATEGORIES) {
     for (const s of c.subs) {
+      if (s.source) {
+        assert.ok(['tourism', 'events'].includes(s.source), `${c.id}/${s.id} source 不正確`);
+        continue;
+      }
       assert.ok(Array.isArray(s.q) && s.q.length, `${c.id}/${s.id} 缺少 q`);
       for (const sel of s.q) {
         assert.match(sel, /^(nwr|node|way)\[/);
